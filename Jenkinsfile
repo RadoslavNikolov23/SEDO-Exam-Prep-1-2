@@ -1,41 +1,39 @@
-pipeline {
+pipeline{
     agent any
-
-    stages {
-        stage('Checkout') {
-            steps {
-                script {
-                    checkout scm
+    
+    stages{
+        stage("Restore the dependencies"){
+            when { 
+                anyOf {
+                    branch 'main'
+                    branch 'feature'
                 }
             }
+            steps{
+                bat 'dotnet restore' 
+            }
         }
-
-        stage('Build and Test') {
-            when {
-                expression {
-                    // Only run this stage if branch is 'main' or starts with 'feature'
-                    return env.BRANCH_NAME == 'main' || env.BRANCH_NAME.startsWith('feature')
+        stage("Build the application"){
+            when { 
+                anyOf {
+                    branch 'main'
+                    branch 'feature'
                 }
             }
-            steps {
-                echo "Building and testing on branch: ${env.BRANCH_NAME}"
-                bat 'dotnet build' 
-                bat 'dotnet test' 
+            steps{
+                bat 'dotnet build --no-restore' 
             }
-            post {
-                always {
-                    junit 'test-results\\**\\*.xml'  // Adjust path if needed
+        }
+        stage("Run the tests"){
+            when { 
+                anyOf {
+                    branch 'main'
+                    branch 'feature'
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "Build and tests succeeded on branch: ${env.BRANCH_NAME}"
-        }
-        failure {
-            echo "Build or tests failed on branch: ${env.BRANCH_NAME}"
+            steps{
+                bat 'dotnet test --no-build --verbosity normal' 
+            }
         }
     }
 }
